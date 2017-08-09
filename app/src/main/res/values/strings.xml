@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Super_res</string>
+    <string name="button_load">Load photo from file</string>
+    <string name="button_take">Take a photo</string>
+    <string name="button_save">SAVE</string>
+    <string name="button_Super_resolution">SUPER RESOLUTION!</string>
+</resources>
