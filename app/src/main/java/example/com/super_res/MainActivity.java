@@ -4,6 +4,8 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.Paint;
 import android.net.Uri;
 import android.os.Environment;
 import android.provider.MediaStore;
@@ -34,7 +36,7 @@ public class MainActivity extends AppCompatActivity {
     static final int PICK_IMAGE_REQUEST = 2;
     private static final String MODEL_FILE = "file:///android_asset/test_graph.pb";//"file:///android_asset/stylize_quantized.pb";
 
-    private static final String INPUT_NODE = "input_4"; //"input"
+    private static final String INPUT_NODE = "input_3"; //"input"
     private static final String OUTPUT_NODE = "mul_245";//"transformer/expand/conv3/conv/Sigmoid";
     private static final String Res_NODE = "style_num";
     private static final boolean DEBUG_MODEL = false;
@@ -49,7 +51,7 @@ public class MainActivity extends AppCompatActivity {
     private int[] intValues2;
     private int frameNum = 1; //?
     private int startSize = 200;
-    private int desiredSize = 800;
+    private int desiredSize = 4*startSize;
     private  double[] rn_mean = new double[] {123.68, 116.779, 103.939};
     private final float[] styleVals = new float[NUM_STYLES];
 
@@ -78,16 +80,7 @@ public class MainActivity extends AppCompatActivity {
 
             AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setMessage("Pick Image from")
-                .setPositiveButton("Camera", new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int id) {
-//                        Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-//                        if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
-//                            startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE);
-//                        }
-                        dispatchTakePictureIntent();
-                    }
-                })
-                .setNegativeButton("Gallery", new DialogInterface.OnClickListener() {
+                .setPositiveButton("Gallery", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
                         Intent intent = new Intent();
                         // Show only images, no videos or anything else
@@ -99,6 +92,7 @@ public class MainActivity extends AppCompatActivity {
                 });
         AlertDialog alert = builder.create();
         alert.show();
+        myRec();
 
     }
 
@@ -277,5 +271,15 @@ public class MainActivity extends AppCompatActivity {
         mBitmap = newBitmap;
         mImageView.setImageBitmap(mBitmap);
         Log.d("koniec", "sam koniec");
+    }
+
+    public void myRec(){
+        Bitmap b = Bitmap.createBitmap(100, 100, Bitmap.Config.ARGB_8888);
+        Canvas c = new Canvas(b);
+        Paint myPaint = new Paint();
+        myPaint.setStyle(Paint.Style.STROKE);
+        myPaint.setStrokeWidth(10);
+        c.drawRect(100, 100, 200, 200, myPaint);
+
     }
 }
