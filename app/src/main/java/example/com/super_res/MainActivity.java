@@ -4,18 +4,23 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
-import android.graphics.Paint;
+import android.graphics.Point;
 import android.net.Uri;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.v4.content.FileProvider;
+import android.support.v7.app.ActionBar;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
+import android.widget.RelativeLayout;
 
 import java.io.File;
 import java.io.IOException;
@@ -25,8 +30,6 @@ import java.util.Date;
 
 import org.tensorflow.contrib.android.TensorFlowInferenceInterface;
 
-import static android.R.attr.bitmap;
-import static android.R.attr.x;
 import static android.R.attr.y;
 
 
@@ -42,18 +45,20 @@ public class MainActivity extends AppCompatActivity {
     private static final boolean DEBUG_MODEL = false;
     private static final int NUM_STYLES = 26;
 
-    ImageView mImageView;
+    FrameLayout mFrameLayout;
     String mCurrentPhotoPath;
     Bitmap mBitmap;
     private float[] floatValues;
     private float[] floatValues2;
     private int[] intValues;
     private int[] intValues2;
-    private int frameNum = 1; //?
     private int startSize = 200;
     private int desiredSize = 4*startSize;
     private  double[] rn_mean = new double[] {123.68, 116.779, 103.939};
     private final float[] styleVals = new float[NUM_STYLES];
+    private MyDragView myRect;
+    private Point mPosition;
+    MyDragView myDragView;
 
     private TensorFlowInferenceInterface inferenceInterface;
 
@@ -65,7 +70,8 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        mImageView = (ImageView) findViewById(R.id.image);
+        mFrameLayout = (FrameLayout) findViewById(R.id.image);
+        mPosition = new Point();
 
         inferenceInterface = new TensorFlowInferenceInterface(getAssets(), MODEL_FILE);
 
@@ -92,7 +98,6 @@ public class MainActivity extends AppCompatActivity {
                 });
         AlertDialog alert = builder.create();
         alert.show();
-        myRec();
 
     }
 
@@ -101,21 +106,57 @@ public class MainActivity extends AppCompatActivity {
         if (resultCode == RESULT_OK) {
             switch (requestCode){
                 case (REQUEST_TAKE_PHOTO): {
-                    setPic();
+                    setPic(); //TODO
                     break;
                 }
                 case (PICK_IMAGE_REQUEST): {
                     Uri selectedimg = data.getData();
                     try {
+                        mFrameLayout.removeAllViews();
                         Bitmap bitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), selectedimg);
                         mBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true);
-                        mImageView.setImageBitmap(mBitmap);
+                        ImageView imageView = new ImageView(this);
+                        imageView.setImageBitmap(mBitmap);
+                        mFrameLayout.addView(imageView);
+                        RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(mBitmap.getWidth(), mBitmap.getHeight());
+                        mFrameLayout.setLayoutParams(lp);
+//                        mFrameLayout.setX(mBitmap.getWidth());
+//                        mFrameLayout.setY(mBitmap.getHeight());
+                        //mImageView.setImageBitmap(mBitmap);
+                        //Canvas mCanvas = new Canvas(mBitmap);
+                        //setContentView(new MyDragView(this, startSize, bitmap));
+                        myDragView = new MyDragView(this, startSize, mBitmap.getWidth(), mBitmap.getHeight());
+                        mFrameLayout.addView(myDragView);
+                        //myRect.draw(mCanvas);
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
                     break;
                 }
             }
+        }
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.menu_new, menu);
+        return super.onCreateOptionsMenu(menu);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.new_picture:
+                Intent intent = new Intent();
+                // Show only images, no videos or anything else
+                intent.setType("image/*");
+                intent.setAction(Intent.ACTION_GET_CONTENT);
+                // Always show the chooser (if there are multiple options available)
+                startActivityForResult(Intent.createChooser(intent, "Select Picture"), PICK_IMAGE_REQUEST);
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
         }
     }
 
@@ -168,8 +209,8 @@ public class MainActivity extends AppCompatActivity {
 
     private void setPic() {
         // Get the dimensions of the View
-        int targetW = mImageView.getWidth();
-        int targetH = mImageView.getHeight();
+        int targetW = mFrameLayout.getWidth();
+        int targetH = mFrameLayout.getHeight();
 
         // Get the dimensions of the bitmap
         BitmapFactory.Options bmOptions = new BitmapFactory.Options();
@@ -188,98 +229,92 @@ public class MainActivity extends AppCompatActivity {
 
         Bitmap bitmap = BitmapFactory.decodeFile(mCurrentPhotoPath, bmOptions);
         mBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true);
-        mImageView.setImageBitmap(mBitmap);
+        ImageView imageView = new ImageView(this);
+        imageView.setImageBitmap(mBitmap);
+        mFrameLayout.addView(imageView);
     }
 
     public void superRes(View view){
-        int x1 = (mBitmap.getWidth() - startSize)/2;
-        int y1 = (mBitmap.getHeight() - startSize)/2;
-        int w1, h1;
-        if ((mBitmap.getWidth() - startSize)%2 == 1){
-            w1 = mBitmap.getWidth() - 2*x1 - 1;
+
+        mPosition = myDragView.getPosition();
+        Log.d("tutaj ", mPosition.toString());
+
+        int x1 = mPosition.x;
+        int y1 = mPosition.y;
+
+        if (x1 < 0 ){
+            x1 = 0;
         }
-        else {
-            w1 = mBitmap.getWidth() - 2*x1;
+        else if(x1 >= mBitmap.getWidth()){
+            x1 = mBitmap.getWidth() - startSize - 1;
         }
-        if ((mBitmap.getHeight() - startSize)%2 == 1){
-            h1 = mBitmap.getHeight() - 2*y1 - 1;
+        if (y1 < 0 ){
+            y1 = 0;
         }
-        else {
-            h1 = mBitmap.getHeight() - 2*y1;
+        else if(y1 >= mBitmap.getHeight()){
+            y1 = mBitmap.getHeight() - startSize - 1;
         }
-        Bitmap croppedBitmap = Bitmap.createBitmap(mBitmap, x1, y1 , w1, h1);
-        Bitmap croppedBitmap2 = croppedBitmap.copy(Bitmap.Config.ARGB_8888, true);
+        Log.d("tutaj 2 ", "x " + x1 + " y1 " + y1);
+        Log.d("tutaj 3 ", "h = " + mBitmap.getHeight() + " w = " + mBitmap.getWidth());
+        Bitmap croppedBitmap = Bitmap.createBitmap(mBitmap, x1, y1, startSize, startSize);
+        final Bitmap croppedBitmap2 = croppedBitmap.copy(Bitmap.Config.ARGB_8888, true);
+
+        setPicture(croppedBitmap2);
+
+        Log.d("tutaj 3 ", " " + croppedBitmap2.getHeight());
         croppedBitmap2.getPixels(intValues, 0, croppedBitmap2.getWidth(), 0, 0,
                 croppedBitmap2.getWidth(), croppedBitmap2.getHeight());
 
-//        if (DEBUG_MODEL) {
-//            // Create a white square that steps through a black background 1 pixel per frame.
-//            final int centerX = (frameNum + mBitmap.getWidth() / 2) % mBitmap.getWidth();
-//            final int centerY = mBitmap.getHeight() / 2;
-//            final int squareSize = 10;
-//            for (int i = 0; i < intValues.length; ++i) {
-//                final int x = i % mBitmap.getWidth();
-//                final int y = i / mBitmap.getHeight();
-//                final float val =
-//                        Math.abs(x - centerX) < squareSize && Math.abs(y - centerY) < squareSize ? 1.0f : 0.0f;
-//                floatValues[i * 3] = val;
-//                floatValues[i * 3 + 1] = val;
-//                floatValues[i * 3 + 2] = val;
-//            }
-//        } else {
-//            for (int i = 0; i < intValues.length; ++i) {
-//                final int val = intValues[i];
-//                floatValues[i * 3] = ((val >> 16) & 0xFF) / 255.0f;
-//                floatValues[i * 3 + 1] = ((val >> 8) & 0xFF) / 255.0f;
-//                floatValues[i * 3 + 2] = (val & 0xFF) / 255.0f;
-//            }
-//        }
-        for (int i = 0; i < intValues.length; ++i) {
-                final int val = intValues[i];
-                floatValues[i * 3 ] = ((val >> 16) & 0xFF);// - (float) rn_mean[0];
-                floatValues[i * 3 + 1] = ((val >> 8) & 0xFF);// - (float) rn_mean[1];
-                floatValues[i * 3 + 2] = (val & 0xFF);// - (float) rn_mean[2];
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                for (int i = 0; i < intValues.length; ++i) {
+                    final int val = intValues[i];
+                    floatValues[i * 3 ] = ((val >> 16) & 0xFF);// - (float) rn_mean[0];
+                    floatValues[i * 3 + 1] = ((val >> 8) & 0xFF);// - (float) rn_mean[1];
+                    floatValues[i * 3 + 2] = (val & 0xFF);// - (float) rn_mean[2];
+                }
+                inferenceInterface.feed(INPUT_NODE, floatValues, 1, croppedBitmap2.getWidth(), croppedBitmap2.getHeight(), 3);
+
+                Log.d("po feed", "?");
+                inferenceInterface.run(new String[] {OUTPUT_NODE}, false);
+                Log.d("po run", "?");
+                inferenceInterface.fetch(OUTPUT_NODE, floatValues2);
+                Log.d("koniec", "po fetch");
+
+
+                for (int i = 0; i < intValues2.length; ++i) {
+                    intValues2[i] =
+                            0xFF000000
+                                    | (Math.min((int) (floatValues2[i * 3 ]  ), 255) << 16)
+                                    | (Math.min((int) (floatValues2[i * 3 + 1]  ), 255) << 8)
+                                    | (Math.min((int) (floatValues2[i * 3 + 2]  ), 255));
+                }
+
+                Bitmap newBitmap = Bitmap.createBitmap(desiredSize, desiredSize, Bitmap.Config.ARGB_8888);;
+
+                newBitmap.setPixels(intValues2, 0, newBitmap.getWidth(), 0, 0, newBitmap.getWidth(), newBitmap.getHeight());
+                mBitmap = newBitmap;
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        setPicture(mBitmap);
+                    }
+                });
             }
-        inferenceInterface.feed(INPUT_NODE, floatValues, 1, croppedBitmap2.getWidth(), croppedBitmap2.getHeight(), 3);
-
-        Log.d("po feed", "?");
-        inferenceInterface.run(new String[] {OUTPUT_NODE}, false);
-        Log.d("po run", "?");
-        inferenceInterface.fetch(OUTPUT_NODE, floatValues2);
-        Log.d("koniec", "po fetch");
+        }).start();
 
 
-        for (int i = 0; i < intValues2.length; ++i) {
-            intValues2[i] =
-                    0xFF000000
-                            | (Math.min((int) (floatValues2[i * 3 ]  ), 255) << 16)
-                            | (Math.min((int) (floatValues2[i * 3 + 1]  ), 255) << 8)
-                            | (Math.min((int) (floatValues2[i * 3 + 2]  ), 255));
-        }
-
-//        for (int i = 0; i < intValues.length; ++i) {
-//            intValues[i] =
-//                    0xFF000000
-//                            | (((int) (floatValues[i * 3] + (float) rn_mean[0])) << 16)
-//                            | (((int) (floatValues[i * 3 + 1] + (float) rn_mean[1])) << 8)
-//                            | ((int) (floatValues[i * 3 + 2] + (float) rn_mean[2]));
-//        }
-
-        Bitmap newBitmap = Bitmap.createBitmap(desiredSize, desiredSize, Bitmap.Config.ARGB_8888);;
-
-        newBitmap.setPixels(intValues2, 0, newBitmap.getWidth(), 0, 0, newBitmap.getWidth(), newBitmap.getHeight());
-        mBitmap = newBitmap;
-        mImageView.setImageBitmap(mBitmap);
         Log.d("koniec", "sam koniec");
     }
 
-    public void myRec(){
-        Bitmap b = Bitmap.createBitmap(100, 100, Bitmap.Config.ARGB_8888);
-        Canvas c = new Canvas(b);
-        Paint myPaint = new Paint();
-        myPaint.setStyle(Paint.Style.STROKE);
-        myPaint.setStrokeWidth(10);
-        c.drawRect(100, 100, 200, 200, myPaint);
-
+    private void setPicture(Bitmap bitmap){
+        Log.d("tutaj ", " w setPicture ");
+        mFrameLayout.removeAllViews();
+        ImageView imageView = new ImageView(this);
+        imageView.setImageBitmap(bitmap);
+        mFrameLayout.addView(imageView);
+        mFrameLayout.invalidate();
     }
+
 }
