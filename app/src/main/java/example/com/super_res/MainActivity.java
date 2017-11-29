@@ -1,13 +1,21 @@
 package example.com.super_res;
 
+import android.Manifest;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Point;
+import android.graphics.Rect;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
+import android.nfc.Tag;
 import android.os.Environment;
 import android.provider.MediaStore;
+import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v4.content.FileProvider;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AlertDialog;
@@ -18,9 +26,11 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
+import android.widget.TextView;
 
 import java.io.File;
 import java.io.IOException;
@@ -38,6 +48,7 @@ public class MainActivity extends AppCompatActivity {
     static final int REQUEST_TAKE_PHOTO = 1;
     static final int PICK_IMAGE_REQUEST = 2;
     private static final String MODEL_FILE = "file:///android_asset/test_graph.pb";//"file:///android_asset/stylize_quantized.pb";
+    static final int WRITE_EXTERNAL_STORAGE = 3;
 
     private static final String INPUT_NODE = "input_3"; //"input"
     private static final String OUTPUT_NODE = "mul_245";//"transformer/expand/conv3/conv/Sigmoid";
@@ -59,6 +70,9 @@ public class MainActivity extends AppCompatActivity {
     private MyDragView myRect;
     private Point mPosition;
     MyDragView myDragView;
+    private Button mButton;
+    private Button mButtonSave;
+    private TextView mTextView;
 
     private TensorFlowInferenceInterface inferenceInterface;
 
@@ -72,8 +86,15 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         mFrameLayout = (FrameLayout) findViewById(R.id.image);
         mPosition = new Point();
+        mButton = (Button) findViewById(R.id.button) ;
+        mButtonSave = (Button) findViewById(R.id.button_save);
+        mTextView = (TextView) findViewById(R.id.text_done);
 
         inferenceInterface = new TensorFlowInferenceInterface(getAssets(), MODEL_FILE);
+
+        if ( ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED){
+            ActivityCompat.requestPermissions(this, new String[] {Manifest.permission.WRITE_EXTERNAL_STORAGE}, WRITE_EXTERNAL_STORAGE);
+        }
 
         intValues = new int[startSize * startSize];
         floatValues = new float[startSize * startSize * 3];
@@ -118,15 +139,34 @@ public class MainActivity extends AppCompatActivity {
                         ImageView imageView = new ImageView(this);
                         imageView.setImageBitmap(mBitmap);
                         mFrameLayout.addView(imageView);
-                        RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(mBitmap.getWidth(), mBitmap.getHeight());
-                        mFrameLayout.setLayoutParams(lp);
+                        Drawable drawable = imageView.getDrawable();
+                        Rect rect = drawable.getBounds();
+
+                        int width = mBitmap.getWidth();//rect.width();
+                        int height = mBitmap.getHeight();//rect.height();
+                        boolean scale = true;
+                        Log.d("Activity resoult", "w B: " + width + "h B: " + height + " w R: " + mFrameLayout.getWidth() + " h w R: " + mFrameLayout.getHeight());
+                        int size = startSize;
+                        if (width < mFrameLayout.getWidth() || height < mFrameLayout.getHeight()) {
+                            RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(width, height);
+                            mFrameLayout.setLayoutParams(lp);
+                            scale = false;
+                        }
+                        else {
+                            float przez = ((float)mFrameLayout.getWidth())/((float)width);
+                            size = (int) ((float)startSize*przez);
+                            Log.d("Main", "przez = " + przez);
+                        }
 //                        mFrameLayout.setX(mBitmap.getWidth());
 //                        mFrameLayout.setY(mBitmap.getHeight());
                         //mImageView.setImageBitmap(mBitmap);
                         //Canvas mCanvas = new Canvas(mBitmap);
                         //setContentView(new MyDragView(this, startSize, bitmap));
-                        myDragView = new MyDragView(this, startSize, mBitmap.getWidth(), mBitmap.getHeight());
+                        Log.d("Main", "size  = " + size);
+                        myDragView = new MyDragView(this, size,  mFrameLayout.getWidth()/(float)width, mFrameLayout.getHeight()/(float)height, scale);
                         mFrameLayout.addView(myDragView);
+                        mButton.setVisibility(View.VISIBLE);
+                        mButtonSave.setVisibility(View.GONE);
                         //myRect.draw(mCanvas);
                     } catch (IOException e) {
                         e.printStackTrace();
@@ -199,12 +239,13 @@ public class MainActivity extends AppCompatActivity {
         return image;
     }
 
-    private void galleryAddPic() {
-        Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
-        File f = new File(mCurrentPhotoPath);
-        Uri contentUri = Uri.fromFile(f);
-        mediaScanIntent.setData(contentUri);
-        this.sendBroadcast(mediaScanIntent);
+    public void galleryAddPic(View view) {
+        MediaStore.Images.Media.insertImage(getContentResolver(), mBitmap, "super res" , "picture after super resolution");
+//        Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
+//        File f = new File(mCurrentPhotoPath);
+//        Uri contentUri = Uri.fromFile(f);
+//        mediaScanIntent.setData(contentUri);
+//        this.sendBroadcast(mediaScanIntent);
     }
 
     private void setPic() {
@@ -265,6 +306,8 @@ public class MainActivity extends AppCompatActivity {
         croppedBitmap2.getPixels(intValues, 0, croppedBitmap2.getWidth(), 0, 0,
                 croppedBitmap2.getWidth(), croppedBitmap2.getHeight());
 
+        mButton.setVisibility(View.GONE);
+
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -299,6 +342,7 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void run() {
                         setPicture(mBitmap);
+                        mButtonSave.setVisibility(View.VISIBLE);
                     }
                 });
             }
@@ -317,4 +361,19 @@ public class MainActivity extends AppCompatActivity {
         mFrameLayout.invalidate();
     }
 
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        switch (requestCode){
+            case WRITE_EXTERNAL_STORAGE:
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    mButtonSave.setText(R.string.save);
+                    mButtonSave.setEnabled(true);
+                }
+                else {
+                    mButtonSave.setText(R.string.no_save);
+                    mButtonSave.setEnabled(false);
+                }
+        }
+    }
 }

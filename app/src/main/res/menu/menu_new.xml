@@ -4,4 +4,5 @@
     android:id="@+id/new_picture"
     android:title="@string/new_foto"
     />
+
 </menu>

@@ -16,11 +16,29 @@
       android:layout_marginBottom="45dp"/>
 
     <Button
+        android:id="@+id/button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         android:layout_centerHorizontal="true"
         android:text="@string/button_Super_resolution"
         android:onClick="superRes"/>
+  <TextView
+      android:id="@+id/text_done"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:text="@string/done"
+      android:layout_alignParentBottom="true"
+      android:layout_centerHorizontal="true"
+      android:visibility="gone"/>
+    <Button
+        android:id="@+id/button_save"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        android:visibility="gone"
+        android:text="@string/save"
+        android:onClick="galleryAddPic"/>
 
 </RelativeLayout>

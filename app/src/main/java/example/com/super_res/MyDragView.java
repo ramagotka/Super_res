@@ -28,10 +28,11 @@ public class MyDragView extends View {
     private Point mPosition;
     private Context mContext;
     private Boolean inRect;
-    private int pX, pY, mX, mY;
+    private float pX, pY, mX, mY;
+    private boolean mScale;
 
 
-    public MyDragView(Context context, int width, int x, int y) {
+    public MyDragView(Context context, int width, float x, float y, boolean scale) {
         super(context);
         setFocusable(true);
         myWidth = width;
@@ -40,8 +41,7 @@ public class MyDragView extends View {
         inRect = false;
         pX = x;
         pY = y;
-        mX = 1;
-        mY = 1;
+        mScale = scale;
     }
 
     @Override
@@ -59,10 +59,12 @@ public class MyDragView extends View {
 
     public final Point getPosition()
     {
-//        int x = mPosition.x/mX *pX;
-//        int y = mPosition.y/mY *pY;
-//
-//        return new Point(x, y);
+        if (mScale){
+            int x = (int) (mPosition.x/pX);
+            int y = (int) (mPosition.y/pY);
+            Log.d("My drag view", "X = " + mPosition.x + " Y = " + mPosition.y + " new x = " + x + " new y = " + y);
+            return new Point(x, y);
+        }
         return mPosition;
     }
 
