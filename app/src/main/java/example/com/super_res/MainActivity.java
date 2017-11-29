@@ -76,6 +76,7 @@ public class MainActivity extends AppCompatActivity {
     private Button mButton;
     private Button mButtonSave;
     private ShareActionProvider mShareActionProvider;
+    private boolean mShare;
 
     private TensorFlowInferenceInterface inferenceInterface;
 
@@ -91,6 +92,7 @@ public class MainActivity extends AppCompatActivity {
         mPosition = new Point();
         mButton = (Button) findViewById(R.id.button) ;
         mButtonSave = (Button) findViewById(R.id.button_save);
+        mShare = false;
 
         inferenceInterface = new TensorFlowInferenceInterface(getAssets(), MODEL_FILE);
 
@@ -169,6 +171,7 @@ public class MainActivity extends AppCompatActivity {
                         mFrameLayout.addView(myDragView);
                         mButton.setVisibility(View.VISIBLE);
                         mButtonSave.setVisibility(View.GONE);
+                        mShare = false;
                         //myRect.draw(mCanvas);
                     } catch (IOException e) {
                         e.printStackTrace();
@@ -185,16 +188,17 @@ public class MainActivity extends AppCompatActivity {
         inflater.inflate(R.menu.menu_new, menu);
         inflater.inflate(R.menu.menu_share, menu);
 
-//        MenuItem shareItem = menu.findItem(R.id.menu_share);
-//
-//        mShareActionProvider = (ShareActionProvider) MenuItemCompat.getActionProvider(shareItem);
-
         MenuItem item = menu.findItem(R.id.menu_share);
 
         // Fetch and store ShareActionProvider
         mShareActionProvider = (ShareActionProvider) MenuItemCompat.getActionProvider(item);
 
-        //setShareIntent();
+        if (mShare){
+            item.setVisible(true);
+        }
+        else {
+            item.setVisible(false);
+        }
 
         return super.onCreateOptionsMenu(menu);
     }
@@ -385,6 +389,8 @@ public class MainActivity extends AppCompatActivity {
                         setPicture(mBitmap);
                         mButtonSave.setVisibility(View.VISIBLE);
                         setShareIntent();
+                        mShare = true;
+                        invalidateOptionsMenu();
                     }
                 });
             }
