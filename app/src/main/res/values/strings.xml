@@ -8,4 +8,5 @@
     <string name="done">DONE!</string>
     <string name="save">save picture</string>
     <string name="no_save">You need permision to save</string>
+    <string name="menu_share">Share</string>
 </resources>

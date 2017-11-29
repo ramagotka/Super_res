@@ -1,6 +1,7 @@
 package example.com.super_res;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -17,10 +18,11 @@ import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.FileProvider;
-import android.support.v7.app.ActionBar;
+import android.support.v4.view.MenuItemCompat;
 import android.support.v7.app.AlertDialog;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.ShareActionProvider;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -32,6 +34,7 @@ import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -72,7 +75,7 @@ public class MainActivity extends AppCompatActivity {
     MyDragView myDragView;
     private Button mButton;
     private Button mButtonSave;
-    private TextView mTextView;
+    private ShareActionProvider mShareActionProvider;
 
     private TensorFlowInferenceInterface inferenceInterface;
 
@@ -88,7 +91,6 @@ public class MainActivity extends AppCompatActivity {
         mPosition = new Point();
         mButton = (Button) findViewById(R.id.button) ;
         mButtonSave = (Button) findViewById(R.id.button_save);
-        mTextView = (TextView) findViewById(R.id.text_done);
 
         inferenceInterface = new TensorFlowInferenceInterface(getAssets(), MODEL_FILE);
 
@@ -181,6 +183,19 @@ public class MainActivity extends AppCompatActivity {
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.menu_new, menu);
+        inflater.inflate(R.menu.menu_share, menu);
+
+//        MenuItem shareItem = menu.findItem(R.id.menu_share);
+//
+//        mShareActionProvider = (ShareActionProvider) MenuItemCompat.getActionProvider(shareItem);
+
+        MenuItem item = menu.findItem(R.id.menu_share);
+
+        // Fetch and store ShareActionProvider
+        mShareActionProvider = (ShareActionProvider) MenuItemCompat.getActionProvider(item);
+
+        //setShareIntent();
+
         return super.onCreateOptionsMenu(menu);
     }
 
@@ -198,6 +213,32 @@ public class MainActivity extends AppCompatActivity {
             default:
                 return super.onOptionsItemSelected(item);
         }
+    }
+
+    private void setShareIntent() {
+        // BEGIN_INCLUDE(update_sap)
+        if (mShareActionProvider != null) {
+            // Get the currently selected item, and retrieve it's share intent
+            Intent shareIntent = new Intent(Intent.ACTION_SEND);
+
+            String bitmapPath = MediaStore.Images.Media.insertImage(getContentResolver(), mBitmap,"title", null);
+//            Uri bitmapUri = Uri.parse(bitmapPath);
+
+            shareIntent.setType("image/*");
+            shareIntent.putExtra(Intent.EXTRA_STREAM, getImageUri());
+
+
+            // Now update the ShareActionProvider with the new share intent
+            mShareActionProvider.setShareIntent(shareIntent);
+        }
+        // END_INCLUDE(update_sap)
+    }
+
+    public Uri getImageUri() {
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        mBitmap.compress(Bitmap.CompressFormat.JPEG, 100, bytes);
+        String path = MediaStore.Images.Media.insertImage(getContentResolver(), mBitmap, "Title", null);
+        return Uri.parse(path);
     }
 
     private void dispatchTakePictureIntent() {
@@ -343,6 +384,7 @@ public class MainActivity extends AppCompatActivity {
                     public void run() {
                         setPicture(mBitmap);
                         mButtonSave.setVisibility(View.VISIBLE);
+                        setShareIntent();
                     }
                 });
             }
