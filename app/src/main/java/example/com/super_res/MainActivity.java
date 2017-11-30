@@ -93,6 +93,7 @@ public class MainActivity extends AppCompatActivity {
         mButton = (Button) findViewById(R.id.button) ;
         mButtonSave = (Button) findViewById(R.id.button_save);
         mShare = false;
+        mButton.setEnabled(false);
 
         inferenceInterface = new TensorFlowInferenceInterface(getAssets(), MODEL_FILE);
 
@@ -151,12 +152,20 @@ public class MainActivity extends AppCompatActivity {
                         boolean scale = true;
                         Log.d("Activity resoult", "w B: " + width + "h B: " + height + " w R: " + mFrameLayout.getWidth() + " h w R: " + mFrameLayout.getHeight());
                         int size = startSize;
+                        float scale_picture = 0;
                         if (width < mFrameLayout.getWidth() || height < mFrameLayout.getHeight()) {
                             RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(width, height);
                             mFrameLayout.setLayoutParams(lp);
                             scale = false;
                         }
                         else {
+                            float subW = (float) mFrameLayout.getWidth()/(float) width;
+                            float subH = (float) mFrameLayout.getHeight()/(float) height;
+                            scale_picture = Math.min(subW, subH);
+                            int newH = Math.round(height*scale_picture);
+                            int newW = Math.round(width*scale_picture);
+                            RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(newW, newH);
+                            mFrameLayout.setLayoutParams(lp);
                             float przez = ((float)mFrameLayout.getWidth())/((float)width);
                             size = (int) ((float)startSize*przez);
                             Log.d("Main", "przez = " + przez);
@@ -167,11 +176,13 @@ public class MainActivity extends AppCompatActivity {
                         //Canvas mCanvas = new Canvas(mBitmap);
                         //setContentView(new MyDragView(this, startSize, bitmap));
                         Log.d("Main", "size  = " + size);
-                        myDragView = new MyDragView(this, size,  mFrameLayout.getWidth()/(float)width, mFrameLayout.getHeight()/(float)height, scale);
+                        myDragView = new MyDragView(this, size,  scale_picture, scale);
                         mFrameLayout.addView(myDragView);
                         mButton.setVisibility(View.VISIBLE);
+                        mButton.setEnabled(true);
                         mButtonSave.setVisibility(View.GONE);
                         mShare = false;
+                        invalidateOptionsMenu();
                         //myRect.draw(mCanvas);
                     } catch (IOException e) {
                         e.printStackTrace();
